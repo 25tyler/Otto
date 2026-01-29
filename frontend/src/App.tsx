@@ -81,7 +81,7 @@ export default function App() {
     reset()
   }
 
-  // Mock test send
+  // Send test email to yourself
   const handleTestSend = useCallback(async () => {
     if (!template || !excelData || !user) return
 
@@ -89,20 +89,33 @@ export default function App() {
     const processedSubject = replacePlaceholders(template.subject, firstRow, mappings)
     const processedBody = replacePlaceholders(template.htmlBody, firstRow, mappings)
 
-    // In production, this would call the API
-    console.log('Test email:', {
-      to: user.email,
-      subject: processedSubject,
-      body: processedBody,
-      cc: template.cc,
-    })
+    try {
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: user.email,
+          cc: template.cc,
+          subject: processedSubject,
+          htmlBody: processedBody,
+        }),
+      })
 
-    // Simulate sending
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    alert(`Test email sent to ${user.email}!\n\nCheck your inbox.`)
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send test email')
+      }
+
+      alert(`Test email sent to ${user.email}!\n\nCheck your inbox.`)
+    } catch (error) {
+      alert(`Failed to send test email: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }, [template, excelData, user, mappings])
 
-  // Mock send all
+  // Send all emails using batch API
   const handleSendAll = useCallback(async () => {
     if (!template || !excelData || !user) return
 
@@ -117,54 +130,103 @@ export default function App() {
     }))
     setSendResults(initialResults)
 
-    // Simulate sending each email
-    for (let i = 0; i < excelData.rows.length; i++) {
-      // Update to sending
-      updateSendResult(i, { status: 'sending' })
+    // Prepare email jobs
+    const emails = excelData.rows.map((row, index) => ({
+      rowIndex: index,
+      to: row[excelData.emailColumn],
+      cc: template.cc,
+      subject: replacePlaceholders(template.subject, row, mappings),
+      htmlBody: replacePlaceholders(template.htmlBody, row, mappings),
+    }))
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+    // Mark all as sending
+    emails.forEach((_, index) => {
+      updateSendResult(index, { status: 'sending' })
+    })
 
-      // Simulate random failures (10% chance)
-      const shouldFail = Math.random() < 0.1
+    try {
+      const response = await fetch('/api/email/send-batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emails }),
+      })
 
-      if (shouldFail) {
-        updateSendResult(i, {
-          status: 'failed',
-          error: 'Simulated failure for demo',
-          timestamp: new Date().toISOString(),
-        })
-      } else {
-        updateSendResult(i, {
-          status: 'success',
-          messageId: `msg_${Date.now()}_${i}`,
-          timestamp: new Date().toISOString(),
-        })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send emails')
       }
 
-      setSendProgress({ sent: i + 1, total: excelData.totalRows })
+      // Update results from API response
+      data.results.forEach((result: { rowIndex: number; status: string; messageId?: string; error?: string }) => {
+        updateSendResult(result.rowIndex, {
+          status: result.status as 'success' | 'failed',
+          messageId: result.messageId,
+          error: result.error,
+          timestamp: new Date().toISOString(),
+        })
+      })
+
+      setSendProgress({ sent: excelData.totalRows, total: excelData.totalRows })
+    } catch (error) {
+      // Mark all as failed if batch request fails
+      emails.forEach((_, index) => {
+        updateSendResult(index, {
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        })
+      })
     }
 
     setIsSending(false)
   }, [template, excelData, user, mappings, setIsSending, setSendProgress, setSendResults, updateSendResult])
 
-  // Mock retry single
+  // Retry single failed email
   const handleRetry = useCallback(async (rowIndex: number) => {
-    if (!excelData) return
+    if (!template || !excelData) return
 
+    const row = excelData.rows[rowIndex]
     updateSendResult(rowIndex, { status: 'sending' })
-    await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    // Simulate success on retry
-    updateSendResult(rowIndex, {
-      status: 'success',
-      messageId: `msg_retry_${Date.now()}`,
-      error: undefined,
-      timestamp: new Date().toISOString(),
-    })
-  }, [excelData, updateSendResult])
+    try {
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: row[excelData.emailColumn],
+          cc: template.cc,
+          subject: replacePlaceholders(template.subject, row, mappings),
+          htmlBody: replacePlaceholders(template.htmlBody, row, mappings),
+        }),
+      })
 
-  // Mock retry all failed
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send email')
+      }
+
+      updateSendResult(rowIndex, {
+        status: 'success',
+        messageId: result.messageId,
+        error: undefined,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      updateSendResult(rowIndex, {
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      })
+    }
+  }, [template, excelData, mappings, updateSendResult])
+
+  // Retry all failed emails
   const handleRetryAll = useCallback(async () => {
     const failedEmails = sendResults.filter((r) => r.status === 'failed')
     for (const failed of failedEmails) {
