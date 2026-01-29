@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply antialiased;
+}
+
+/* Email body styling */
+.email-body {
+  @apply text-gray-800;
+}
+
+.email-body p {
+  @apply my-3;
+}
+
+.email-body ul, .email-body ol {
+  @apply my-3 ml-6;
+}
+
+.email-body li {
+  @apply my-1;
+}
+
+.email-body a {
+  @apply text-blue-600 underline;
+}
+
+.email-body strong, .email-body b {
+  @apply font-semibold;
+}
+
+.email-body em, .email-body i {
+  @apply italic;
+}
+
+/* Placeholder highlight */
+.placeholder-highlight {
+  @apply bg-yellow-100 text-yellow-800 px-1 rounded font-medium;
+}
