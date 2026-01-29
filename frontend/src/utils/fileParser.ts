@@ -24,9 +24,11 @@ export async function parseDocxTemplate(file: File): Promise<ParsedTemplate> {
   // Find the --- separator in raw text for header extraction
   const textSeparatorIndex = rawText.indexOf('---')
   let textHeader = ''
+  let textBody = rawText
 
   if (textSeparatorIndex !== -1) {
     textHeader = rawText.substring(0, textSeparatorIndex)
+    textBody = rawText.substring(textSeparatorIndex + 3).trim()
   }
 
   // Extract subject line
@@ -42,22 +44,46 @@ export async function parseDocxTemplate(file: File): Promise<ParsedTemplate> {
     .filter((email) => email.length > 0 && email.includes('@'))
 
   // Find the --- separator in HTML and extract body
-  // docx-preview wraps content in various elements, so search for --- text
+  // docx-preview may render --- in various ways, so try multiple patterns
   let htmlBody = fullHtml
-  const separatorRegex = />---<|>---\s*</
-  const separatorMatch = fullHtml.match(separatorRegex)
 
-  if (separatorMatch && separatorMatch.index !== undefined) {
-    // Find the end of the paragraph/element containing ---
-    const afterSeparator = fullHtml.substring(separatorMatch.index)
-    const endOfElement = afterSeparator.indexOf('>')
-    if (endOfElement !== -1) {
-      // Skip past the closing tag
-      const restOfHtml = afterSeparator.substring(endOfElement + 1)
-      // Find where the next content starts (skip closing tags)
-      const contentMatch = restOfHtml.match(/<[^/]/)
-      if (contentMatch && contentMatch.index !== undefined) {
-        htmlBody = restOfHtml.substring(contentMatch.index).trim()
+  // Try to find "---" in the HTML (might be wrapped in spans, paragraphs, etc.)
+  const separatorPatterns = [
+    />-{3,}</,           // >---<
+    />-{3,}\s*</,        // >--- < with whitespace
+    /<[^>]*>-{3,}<\/[^>]*>/, // full element containing ---
+  ]
+
+  let foundSeparator = false
+  for (const pattern of separatorPatterns) {
+    const match = fullHtml.match(pattern)
+    if (match && match.index !== undefined) {
+      // Find the end of the element containing the separator
+      const afterMatch = fullHtml.substring(match.index + match[0].length)
+      // Skip any closing tags until we find opening content
+      const nextContentMatch = afterMatch.match(/<(?!\/)[^>]+>/)
+      if (nextContentMatch && nextContentMatch.index !== undefined) {
+        htmlBody = afterMatch.substring(nextContentMatch.index).trim()
+        foundSeparator = true
+        break
+      }
+    }
+  }
+
+  // If no separator found in HTML, try to extract body based on text content
+  if (!foundSeparator && textBody) {
+    // Get the first line of the body text to search for in HTML
+    const firstBodyLine = textBody.split('\n')[0].trim()
+    if (firstBodyLine) {
+      const bodyStartIndex = fullHtml.indexOf(firstBodyLine)
+      if (bodyStartIndex !== -1) {
+        // Find the start of the element containing this text
+        const beforeText = fullHtml.substring(0, bodyStartIndex)
+        const lastOpenTag = beforeText.lastIndexOf('<')
+        if (lastOpenTag !== -1) {
+          htmlBody = fullHtml.substring(lastOpenTag).trim()
+          foundSeparator = true
+        }
       }
     }
   }
