@@ -47,10 +47,10 @@ export function EmailCard({
         </div>
       </div>
 
-      {/* Email Body */}
+      {/* Email Body - renders like actual email client */}
       <div className="px-6 py-4">
         <div
-          className="prose prose-sm max-w-none email-body"
+          className="email-preview-body"
           dangerouslySetInnerHTML={{ __html: htmlBody }}
         />
       </div>

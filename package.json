@@ -2,7 +2,7 @@
   "name": "otto",
   "version": "1.0.0",
   "private": true,
-  "description": "Otto - Send personalized bulk emails with ease",
+  "description": "Otto - Automated bulk email sending made simple",
   "scripts": {
     "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",

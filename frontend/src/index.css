@@ -6,33 +6,58 @@ body {
   @apply antialiased;
 }
 
-/* Email body styling */
-.email-body {
-  @apply text-gray-800;
+/* Email preview - mimics how Gmail renders emails */
+.email-preview-body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #222222;
 }
 
-.email-body p {
-  @apply my-3;
+.email-preview-body p {
+  margin: 0 0 1em 0;
 }
 
-.email-body ul, .email-body ol {
-  @apply my-3 ml-6;
+.email-preview-body h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.67em 0;
 }
 
-.email-body li {
-  @apply my-1;
+.email-preview-body h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.83em 0;
 }
 
-.email-body a {
-  @apply text-blue-600 underline;
+.email-preview-body ul, .email-preview-body ol {
+  margin: 1em 0;
+  padding-left: 40px;
 }
 
-.email-body strong, .email-body b {
-  @apply font-semibold;
+.email-preview-body li {
+  margin: 0.5em 0;
 }
 
-.email-body em, .email-body i {
-  @apply italic;
+.email-preview-body a {
+  color: #1a0dab;
+  text-decoration: underline;
+}
+
+.email-preview-body strong, .email-preview-body b {
+  font-weight: bold;
+}
+
+.email-preview-body em, .email-preview-body i {
+  font-style: italic;
+}
+
+.email-preview-body u {
+  text-decoration: underline;
+}
+
+.email-preview-body del, .email-preview-body s {
+  text-decoration: line-through;
 }
 
 /* Placeholder highlight */
