@@ -1,5 +1,54 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, FileText, Table, Mail, HelpCircle } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, Table, Mail, HelpCircle, Download } from 'lucide-react'
+import * as XLSX from 'xlsx'
+
+// Generate and download sample Excel file
+const downloadSampleExcel = () => {
+  const data = [
+    { Email: 'john@example.com', Name: 'John Smith', Company: 'Acme Corp', Type: 'Monthly' },
+    { Email: 'jane@example.com', Name: 'Jane Doe', Company: 'Tech Inc', Type: 'Weekly' },
+    { Email: 'bob@example.com', Name: 'Bob Johnson', Company: 'StartupXYZ', Type: 'Monthly' },
+  ]
+
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Recipients')
+
+  // Set column widths
+  worksheet['!cols'] = [
+    { wch: 25 }, // Email
+    { wch: 15 }, // Name
+    { wch: 15 }, // Company
+    { wch: 10 }, // Type
+  ]
+
+  XLSX.writeFile(workbook, 'otto-sample-data.xlsx')
+}
+
+// Generate and download sample DOCX template (as HTML that Word can open)
+const downloadSampleTemplate = () => {
+  const templateContent = `Subject: Your [Type] Report is Ready
+CC:
+---
+Dear [Name],
+
+Your [Type] report for [Company] is now ready for review.
+
+Please take a moment to review the attached document and let us know if you have any questions.
+
+Best regards,
+Your Team`
+
+  const blob = new Blob([templateContent], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'otto-sample-template.txt'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 export function Instructions() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -64,6 +113,13 @@ Your Team`}
                   <span><code className="bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded text-xs">[Placeholders]</code> will be replaced with your data</span>
                 </li>
               </ul>
+              <button
+                onClick={downloadSampleTemplate}
+                className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
+              >
+                <Download className="w-4 h-4" />
+                Download Sample Template
+              </button>
             </div>
           </div>
 
@@ -117,6 +173,13 @@ Your Team`}
                   <span>Column names should match your <code className="bg-yellow-100 text-yellow-800 px-1 rounded text-xs">[Placeholders]</code></span>
                 </li>
               </ul>
+              <button
+                onClick={downloadSampleExcel}
+                className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
+              >
+                <Download className="w-4 h-4" />
+                Download Sample Excel
+              </button>
             </div>
           </div>
 
