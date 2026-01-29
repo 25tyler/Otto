@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, FileText, Table, Mail, HelpCircle, Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { Document, Packer, Paragraph, TextRun } from 'docx'
 
 // Generate and download sample Excel file
 const downloadSampleExcel = () => {
@@ -25,25 +26,54 @@ const downloadSampleExcel = () => {
   XLSX.writeFile(workbook, 'otto-sample-data.xlsx')
 }
 
-// Generate and download sample DOCX template (as HTML that Word can open)
-const downloadSampleTemplate = () => {
-  const templateContent = `Subject: Your [Type] Report is Ready
-CC:
----
-Dear [Name],
+// Generate and download sample DOCX template
+const downloadSampleTemplate = async () => {
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: [
+        new Paragraph({
+          children: [new TextRun('Subject: Your [Type] Report is Ready')],
+        }),
+        new Paragraph({
+          children: [new TextRun('CC:')],
+        }),
+        new Paragraph({
+          children: [new TextRun('---')],
+        }),
+        new Paragraph({
+          children: [new TextRun('Dear [Name],')],
+        }),
+        new Paragraph({
+          children: [new TextRun('')],
+        }),
+        new Paragraph({
+          children: [new TextRun('Your [Type] report for [Company] is now ready for review.')],
+        }),
+        new Paragraph({
+          children: [new TextRun('')],
+        }),
+        new Paragraph({
+          children: [new TextRun('Please take a moment to review the attached document and let us know if you have any questions.')],
+        }),
+        new Paragraph({
+          children: [new TextRun('')],
+        }),
+        new Paragraph({
+          children: [new TextRun('Best regards,')],
+        }),
+        new Paragraph({
+          children: [new TextRun('Your Team')],
+        }),
+      ],
+    }],
+  })
 
-Your [Type] report for [Company] is now ready for review.
-
-Please take a moment to review the attached document and let us know if you have any questions.
-
-Best regards,
-Your Team`
-
-  const blob = new Blob([templateContent], { type: 'text/plain' })
+  const blob = await Packer.toBlob(doc)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'otto-sample-template.txt'
+  a.download = 'otto-sample-template.docx'
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
