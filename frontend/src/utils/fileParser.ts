@@ -1,39 +1,29 @@
 import mammoth from 'mammoth'
 import * as XLSX from 'xlsx'
+import { renderAsync } from 'docx-preview'
 import type { ParsedTemplate, ExcelData } from '../types'
 import { extractPlaceholders } from './placeholders'
 
 export async function parseDocxTemplate(file: File): Promise<ParsedTemplate> {
   const arrayBuffer = await file.arrayBuffer()
 
-  // Convert DOCX to HTML with mammoth
-  const result = await mammoth.convertToHtml(
-    { arrayBuffer },
-    {
-      styleMap: [
-        "p[style-name='Heading 1'] => h1:fresh",
-        "p[style-name='Heading 2'] => h2:fresh",
-        "b => strong",
-        "i => em",
-        "u => u",
-        "strike => del",
-      ],
-    }
-  )
+  // Use docx-preview to render to HTML with full formatting preserved
+  const container = document.createElement('div')
+  await renderAsync(arrayBuffer, container, undefined, {
+    inWrapper: false,
+    ignoreWidth: true,
+    ignoreHeight: true,
+  })
 
-  const fullHtml = result.value
+  // Get the rendered HTML
+  const fullHtml = container.innerHTML
+
+  // Also get raw text using mammoth for subject/cc extraction
   const rawText = await mammoth.extractRawText({ arrayBuffer }).then((r) => r.value)
 
-  // Find the --- separator
-  const separatorIndex = fullHtml.indexOf('<p>---</p>')
+  // Find the --- separator in raw text for header extraction
   const textSeparatorIndex = rawText.indexOf('---')
-
-  let htmlBody = fullHtml
   let textHeader = ''
-
-  if (separatorIndex !== -1) {
-    htmlBody = fullHtml.substring(separatorIndex + '<p>---</p>'.length).trim()
-  }
 
   if (textSeparatorIndex !== -1) {
     textHeader = rawText.substring(0, textSeparatorIndex)
@@ -51,8 +41,29 @@ export async function parseDocxTemplate(file: File): Promise<ParsedTemplate> {
     .map((email) => email.trim())
     .filter((email) => email.length > 0 && email.includes('@'))
 
+  // Find the --- separator in HTML and extract body
+  // docx-preview wraps content in various elements, so search for --- text
+  let htmlBody = fullHtml
+  const separatorRegex = />---<|>---\s*</
+  const separatorMatch = fullHtml.match(separatorRegex)
+
+  if (separatorMatch && separatorMatch.index !== undefined) {
+    // Find the end of the paragraph/element containing ---
+    const afterSeparator = fullHtml.substring(separatorMatch.index)
+    const endOfElement = afterSeparator.indexOf('>')
+    if (endOfElement !== -1) {
+      // Skip past the closing tag
+      const restOfHtml = afterSeparator.substring(endOfElement + 1)
+      // Find where the next content starts (skip closing tags)
+      const contentMatch = restOfHtml.match(/<[^/]/)
+      if (contentMatch && contentMatch.index !== undefined) {
+        htmlBody = restOfHtml.substring(contentMatch.index).trim()
+      }
+    }
+  }
+
   // Find all placeholders in subject and body
-  const allText = subject + ' ' + htmlBody
+  const allText = subject + ' ' + rawText
   const placeholders = extractPlaceholders(allText)
 
   return {
@@ -61,6 +72,7 @@ export async function parseDocxTemplate(file: File): Promise<ParsedTemplate> {
     htmlBody,
     placeholders,
     rawText,
+    docxArrayBuffer: arrayBuffer,
   }
 }
 

@@ -10,6 +10,7 @@ export interface ParsedTemplate {
   htmlBody: string
   placeholders: string[]
   rawText: string
+  docxArrayBuffer?: ArrayBuffer
 }
 
 export interface ExcelData {
