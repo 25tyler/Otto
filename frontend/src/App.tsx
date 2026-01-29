@@ -10,7 +10,7 @@ import { FailedEmailsPanel } from './components/send/FailedEmailsPanel'
 import { Instructions } from './components/Instructions'
 import { Card, CardHeader, CardTitle } from './components/ui/Card'
 import { LogOut, RotateCcw } from 'lucide-react'
-import { replacePlaceholders } from './utils/placeholders'
+import { generateEmailFromDocx } from './utils/docxEmail'
 
 export default function App() {
   const {
@@ -83,13 +83,19 @@ export default function App() {
 
   // Send test email to yourself
   const handleTestSend = useCallback(async () => {
-    if (!template || !excelData || !user) return
+    if (!template || !excelData || !user || !template.docxArrayBuffer) return
 
     const firstRow = excelData.rows[0]
-    const processedSubject = replacePlaceholders(template.subject, firstRow, mappings)
-    const processedBody = replacePlaceholders(template.htmlBody, firstRow, mappings)
 
     try {
+      // Generate email from DOCX with placeholders replaced
+      const { subject, htmlBody } = await generateEmailFromDocx(
+        template.docxArrayBuffer,
+        template.subject,
+        firstRow,
+        mappings
+      )
+
       const response = await fetch('/api/email/send', {
         method: 'POST',
         headers: {
@@ -98,8 +104,8 @@ export default function App() {
         body: JSON.stringify({
           to: user.email,
           cc: template.cc,
-          subject: processedSubject,
-          htmlBody: processedBody,
+          subject,
+          htmlBody,
         }),
       })
 
@@ -117,7 +123,7 @@ export default function App() {
 
   // Send all emails using batch API
   const handleSendAll = useCallback(async () => {
-    if (!template || !excelData || !user) return
+    if (!template || !excelData || !user || !template.docxArrayBuffer) return
 
     setIsSending(true)
     setSendProgress({ sent: 0, total: excelData.totalRows })
@@ -130,14 +136,24 @@ export default function App() {
     }))
     setSendResults(initialResults)
 
-    // Prepare email jobs
-    const emails = excelData.rows.map((row, index) => ({
-      rowIndex: index,
-      to: row[excelData.emailColumn],
-      cc: template.cc,
-      subject: replacePlaceholders(template.subject, row, mappings),
-      htmlBody: replacePlaceholders(template.htmlBody, row, mappings),
-    }))
+    // Generate emails from DOCX for each row
+    const emails = await Promise.all(
+      excelData.rows.map(async (row, index) => {
+        const { subject, htmlBody } = await generateEmailFromDocx(
+          template.docxArrayBuffer!,
+          template.subject,
+          row,
+          mappings
+        )
+        return {
+          rowIndex: index,
+          to: row[excelData.emailColumn],
+          cc: template.cc,
+          subject,
+          htmlBody,
+        }
+      })
+    )
 
     // Mark all as sending
     emails.forEach((_, index) => {
@@ -186,12 +202,20 @@ export default function App() {
 
   // Retry single failed email
   const handleRetry = useCallback(async (rowIndex: number) => {
-    if (!template || !excelData) return
+    if (!template || !excelData || !template.docxArrayBuffer) return
 
     const row = excelData.rows[rowIndex]
     updateSendResult(rowIndex, { status: 'sending' })
 
     try {
+      // Generate email from DOCX with placeholders replaced
+      const { subject, htmlBody } = await generateEmailFromDocx(
+        template.docxArrayBuffer,
+        template.subject,
+        row,
+        mappings
+      )
+
       const response = await fetch('/api/email/send', {
         method: 'POST',
         headers: {
@@ -200,8 +224,8 @@ export default function App() {
         body: JSON.stringify({
           to: row[excelData.emailColumn],
           cc: template.cc,
-          subject: replacePlaceholders(template.subject, row, mappings),
-          htmlBody: replacePlaceholders(template.htmlBody, row, mappings),
+          subject,
+          htmlBody,
         }),
       })
 

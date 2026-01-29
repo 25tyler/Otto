@@ -1,34 +1,49 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useEmailStore } from '../../stores/emailStore'
-import { replacePlaceholders } from '../../utils/placeholders'
+import { generateEmailPreview } from '../../utils/docxEmail'
 import { EmailCard } from './EmailCard'
 import { NavigationControls } from './NavigationControls'
-import { Mail } from 'lucide-react'
+import { Mail, Loader2 } from 'lucide-react'
 
 export function EmailPreview() {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [preview, setPreview] = useState<{ subject: string; htmlBody: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const { template, excelData, mappings, user } = useEmailStore()
 
   const currentRow = excelData?.rows[currentIndex]
   const totalRows = excelData?.rows.length || 0
 
-  const preview = useMemo(() => {
-    if (!template || !currentRow || !mappings) return null
+  // Generate preview when row changes
+  useEffect(() => {
+    if (!template || !currentRow || !mappings || !template.docxArrayBuffer) {
+      setPreview(null)
+      return
+    }
 
-    const processedSubject = replacePlaceholders(
+    let cancelled = false
+    setIsLoading(true)
+
+    generateEmailPreview(
+      template.docxArrayBuffer,
       template.subject,
       currentRow,
       mappings
-    )
-    const processedBody = replacePlaceholders(
-      template.htmlBody,
-      currentRow,
-      mappings
-    )
+    ).then((result) => {
+      if (!cancelled) {
+        setPreview(result)
+        setIsLoading(false)
+      }
+    }).catch((error) => {
+      console.error('Failed to generate preview:', error)
+      if (!cancelled) {
+        setPreview(null)
+        setIsLoading(false)
+      }
+    })
 
-    return {
-      subject: processedSubject,
-      htmlBody: processedBody,
+    return () => {
+      cancelled = true
     }
   }, [template, currentRow, mappings])
 
@@ -41,6 +56,15 @@ export function EmailPreview() {
         <p className="text-gray-500">
           Upload a template and Excel file to preview emails
         </p>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <Loader2 className="w-8 h-8 text-primary-600 animate-spin mb-4" />
+        <p className="text-gray-500">Generating preview...</p>
       </div>
     )
   }
