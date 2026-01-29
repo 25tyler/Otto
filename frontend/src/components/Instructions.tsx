@@ -88,7 +88,7 @@ CC: manager@company.com, backup@company.com
 ---
 Dear [Name],
 
-Your **[Type]** report for **[Company]** is now ready.
+Your [Type] report for [Company] is now ready.
 
 Please review it at your earliest convenience.
 
