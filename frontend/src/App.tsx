@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useEmailStore } from './stores/emailStore'
 import { GoogleSignIn } from './components/auth/GoogleSignIn'
 import { TemplateUpload } from './components/upload/TemplateUpload'
@@ -28,26 +28,55 @@ export default function App() {
   } = useEmailStore()
 
   const [isSigningIn, setIsSigningIn] = useState(false)
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session')
+        const data = await response.json()
+        if (data.user) {
+          setUser(data.user)
+        }
+      } catch (error) {
+        console.error('Session check failed:', error)
+      } finally {
+        setIsCheckingSession(false)
+      }
+    }
+    checkSession()
+  }, [setUser])
 
   // Check if ready for preview
   const isReadyToPreview = template && excelData && mappings.length > 0
   const hasUnmappedPlaceholders = mappings.some((m) => !m.excelColumn)
   const hasSendResults = sendResults.length > 0
 
-  // Mock sign-in for demo (in production, this would use Google OAuth)
+  // Real Google OAuth sign-in
   const handleSignIn = async () => {
     setIsSigningIn(true)
-    // Simulate OAuth flow
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setUser({
-      email: 'demo@gmail.com',
-      name: 'Demo User',
-      picture: 'https://ui-avatars.com/api/?name=Demo+User&background=3b82f6&color=fff',
-    })
-    setIsSigningIn(false)
+    try {
+      const response = await fetch('/api/auth/google-url')
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        console.error('No auth URL returned')
+        setIsSigningIn(false)
+      }
+    } catch (error) {
+      console.error('Sign-in failed:', error)
+      setIsSigningIn(false)
+    }
   }
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
     setUser(null)
     reset()
   }
@@ -142,6 +171,18 @@ export default function App() {
       await handleRetry(failed.rowIndex)
     }
   }, [sendResults, handleRetry])
+
+  // Loading session check
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="w-20 h-20 bg-primary-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+          <span className="text-3xl font-bold text-white">O</span>
+        </div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
 
   // Not signed in
   if (!user) {
