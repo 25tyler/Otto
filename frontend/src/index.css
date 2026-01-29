@@ -15,7 +15,11 @@ body {
 }
 
 .email-preview-body p {
-  margin: 0 0 1em 0;
+  margin: 0;
+}
+
+.email-preview-body p:empty {
+  height: 1em;
 }
 
 .email-preview-body h1 {
