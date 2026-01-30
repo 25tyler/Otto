@@ -1,9 +1,7 @@
 import { useCallback, useState } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { Table, Check, X, AlertCircle, AlertTriangle, Link, Upload, Download } from 'lucide-react'
+import { Table, Check, X, AlertCircle, AlertTriangle, Link } from 'lucide-react'
 import { useEmailStore } from '../../stores/emailStore'
 import { autoMapPlaceholders } from '../../utils/placeholders'
-import { parseExcelFile } from '../../utils/fileParser'
 import { GooglePicker } from '../picker/GooglePicker'
 
 export function DataUpload() {
@@ -11,32 +9,6 @@ export function DataUpload() {
   const [error, setError] = useState<string | null>(null)
   const { excelData, excelFileName, template, setExcelData, setMappings } = useEmailStore()
 
-  // Handle local Excel file upload
-  const handleFileUpload = useCallback(
-    async (file: File) => {
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const data = await parseExcelFile(file)
-        setExcelData(data, file.name)
-
-        // Auto-map placeholders if template is already loaded
-        if (template) {
-          const mappings = autoMapPlaceholders(template.placeholders, data.headers)
-          setMappings(mappings)
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to parse spreadsheet')
-        setExcelData(null)
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [template, setExcelData, setMappings]
-  )
-
-  // Handle Google Sheet selection
   const handleSheetSelect = useCallback(
     async (file: { id: string; name: string; mimeType: string }) => {
       setIsLoading(true)
@@ -67,26 +39,6 @@ export function DataUpload() {
     },
     [template, setExcelData, setMappings]
   )
-
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      if (acceptedFiles.length > 0) {
-        handleFileUpload(acceptedFiles[0])
-      }
-    },
-    [handleFileUpload]
-  )
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls'],
-      'text/csv': ['.csv'],
-    },
-    maxFiles: 1,
-    disabled: isLoading,
-  })
 
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -174,54 +126,22 @@ export function DataUpload() {
   }
 
   return (
-    <div className="border-2 border-dashed rounded-xl p-6 text-center border-gray-300">
+    <div className="border-2 border-dashed rounded-xl p-8 text-center border-gray-300">
       <div className="flex flex-col items-center">
         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
           <Table className="w-6 h-6 text-gray-400" />
         </div>
         <p className="font-medium text-gray-900 mb-1">Recipient Data</p>
-        <p className="text-sm text-gray-500 mb-4">Google Sheet (recommended) or Excel file</p>
-
-        <div className="flex flex-col gap-3 w-full">
-          {/* Google Drive option */}
-          <GooglePicker
-            onSelect={handleSheetSelect}
-            mimeTypes={['application/vnd.google-apps.spreadsheet']}
-            buttonText="Select from Google Drive"
-            buttonIcon={<Link className="w-4 h-4" />}
-            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm font-medium"
-          />
-
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <div className="flex-1 border-t border-gray-200" />
-            <span>or</span>
-            <div className="flex-1 border-t border-gray-200" />
-          </div>
-
-          {/* File upload option */}
-          <div
-            {...getRootProps()}
-            className={`flex items-center justify-center gap-2 w-full px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition-colors text-sm ${
-              isDragActive
-                ? 'border-primary-400 bg-primary-50 text-primary-600'
-                : 'border-gray-300 hover:border-gray-400 text-gray-600'
-            }`}
-          >
-            <input {...getInputProps()} />
-            <Upload className="w-4 h-4" />
-            <span>{isDragActive ? 'Drop file here' : 'Upload Excel/CSV file'}</span>
-          </div>
-
-          {/* Download sample data */}
-          <a
-            href="/sample-data.xlsx"
-            download
-            className="flex items-center justify-center gap-2 text-xs text-gray-500 hover:text-primary-600 transition-colors mt-1"
-          >
-            <Download className="w-3 h-3" />
-            <span>Download sample spreadsheet</span>
-          </a>
-        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Select a Google Sheet with recipient emails
+        </p>
+        <GooglePicker
+          onSelect={handleSheetSelect}
+          mimeTypes={['application/vnd.google-apps.spreadsheet']}
+          buttonText="Select from Google Drive"
+          buttonIcon={<Link className="w-4 h-4" />}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+        />
       </div>
     </div>
   )

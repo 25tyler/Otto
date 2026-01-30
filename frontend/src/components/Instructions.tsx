@@ -27,11 +27,11 @@ export function Instructions() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <FileText className="w-4 h-4 text-primary-600" />
-              <h4 className="font-semibold text-gray-900">1. Create Your Email Template</h4>
+              <h4 className="font-semibold text-gray-900">1. Create Your Email Template (Google Doc)</h4>
             </div>
             <div className="bg-white rounded-lg p-4 text-sm">
               <p className="text-gray-600 mb-3">
-                Create a Google Doc (recommended) or DOCX file with this format:
+                Create a Google Doc with this format:
               </p>
               <pre className="bg-gray-50 rounded-lg p-4 text-xs overflow-x-auto border border-gray-200">
 {`Subject: Your [Type] Report is Ready
@@ -75,11 +75,11 @@ Your Team`}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Table className="w-4 h-4 text-primary-600" />
-              <h4 className="font-semibold text-gray-900">2. Prepare Your Recipient Data</h4>
+              <h4 className="font-semibold text-gray-900">2. Prepare Your Recipient Data (Google Sheet)</h4>
             </div>
             <div className="bg-white rounded-lg p-4 text-sm">
               <p className="text-gray-600 mb-3">
-                Create a Google Sheet (recommended) or Excel/CSV file with your recipient data:
+                Create a Google Sheet with your recipient data:
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
@@ -134,7 +134,7 @@ Your Team`}
               <ol className="space-y-2 text-gray-600">
                 <li className="flex items-start gap-2">
                   <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                  <span>Select your template and recipient data (from Google Drive or upload files)</span>
+                  <span>Select your Google Doc template and Google Sheet data</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
