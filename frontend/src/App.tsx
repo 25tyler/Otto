@@ -11,6 +11,7 @@ import { Instructions } from './components/Instructions'
 import { Card, CardHeader, CardTitle } from './components/ui/Card'
 import { LogOut, RotateCcw } from 'lucide-react'
 import { generateEmailFromGoogleDoc } from './utils/googleDocsEmail'
+import { autoMapPlaceholders } from './utils/placeholders'
 
 export default function App() {
   const {
@@ -20,6 +21,7 @@ export default function App() {
     user,
     sendResults,
     setUser,
+    setMappings,
     setIsSending,
     setSendProgress,
     setSendResults,
@@ -47,6 +49,14 @@ export default function App() {
     }
     checkSession()
   }, [setUser])
+
+  // Auto-map placeholders when both template and data are available
+  useEffect(() => {
+    if (template && excelData && template.placeholders.length > 0 && mappings.length === 0) {
+      const newMappings = autoMapPlaceholders(template.placeholders, excelData.headers)
+      setMappings(newMappings)
+    }
+  }, [template, excelData, mappings.length, setMappings])
 
   // Check if ready for preview
   const isReadyToPreview = template && excelData && mappings.length > 0
