@@ -55,18 +55,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const batchPromises = batch.map(async (job) => {
       try {
         // Build RFC 2822 message
-        const messageParts = [
+        // Headers first, then blank line, then body
+        const headers = [
           `From: ${session.user.email}`,
           `To: ${job.to}`,
-          job.cc?.length ? `Cc: ${job.cc.join(', ')}` : '',
+          job.cc?.length ? `Cc: ${job.cc.join(', ')}` : null,
           `Subject: =?UTF-8?B?${Buffer.from(job.subject).toString('base64')}?=`,
           'MIME-Version: 1.0',
           'Content-Type: text/html; charset=UTF-8',
-          '',
-          job.htmlBody,
         ]
-          .filter(Boolean)
+          .filter((h): h is string => h !== null)
           .join('\r\n')
+
+        // RFC 2822: blank line separates headers from body
+        const messageParts = headers + '\r\n\r\n' + job.htmlBody
 
         const encodedMessage = Buffer.from(messageParts)
           .toString('base64')
