@@ -43,6 +43,8 @@ interface PickerBuilder {
   addView(view: DocsView | ViewId): PickerBuilder
   setOAuthToken(token: string): PickerBuilder
   setDeveloperKey(key: string): PickerBuilder
+  setAppId(appId: string): PickerBuilder
+  setOrigin(origin: string): PickerBuilder
   setCallback(callback: (data: PickerResponse) => void): PickerBuilder
   build(): Picker
 }
@@ -74,6 +76,14 @@ interface GooglePickerProps {
 const GOOGLE_API_SCRIPT = 'https://apis.google.com/js/api.js'
 const GOOGLE_GSI_SCRIPT = 'https://accounts.google.com/gsi/client'
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY as string | undefined
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+
+// Extract the project number from Client ID (format: PROJECT_NUMBER-xxx.apps.googleusercontent.com)
+const getAppId = (): string | undefined => {
+  if (!GOOGLE_CLIENT_ID) return undefined
+  const match = GOOGLE_CLIENT_ID.match(/^(\d+)-/)
+  return match ? match[1] : undefined
+}
 
 export function GooglePicker({
   onSelect,
@@ -136,6 +146,7 @@ export function GooglePicker({
   }, [])
 
   const openPicker = useCallback(() => {
+    const appId = getAppId()
     if (!pickerLoaded || !accessToken || !GOOGLE_API_KEY) {
       console.error('Picker not ready:', { pickerLoaded, hasToken: !!accessToken, hasApiKey: !!GOOGLE_API_KEY })
       return
@@ -157,10 +168,11 @@ export function GooglePicker({
       view.setMimeTypes(mimeTypes.join(','))
       view.setMode(google.picker.DocsViewMode.LIST)
 
-      const picker = new google.picker.PickerBuilder()
+      const builder = new google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
         .setDeveloperKey(GOOGLE_API_KEY)
+        .setOrigin(window.location.origin)
         .setCallback((data: PickerResponse) => {
           setIsLoading(false)
 
@@ -173,8 +185,13 @@ export function GooglePicker({
             })
           }
         })
-        .build()
 
+      // setAppId is required for proper file selection
+      if (appId) {
+        builder.setAppId(appId)
+      }
+
+      const picker = builder.build()
       picker.setVisible(true)
     } catch (error) {
       console.error('Failed to open picker:', error)
