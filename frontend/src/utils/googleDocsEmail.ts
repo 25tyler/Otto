@@ -59,10 +59,52 @@ function extractBodyFromHtml(fullHtml: string): string {
 
   let separatorElement: Element | null = null
 
-  // Find the element containing just "---"
+  // First check for <hr> elements (Google Docs sometimes uses these)
+  const hrElements = content.querySelectorAll('hr')
+  if (hrElements.length > 0) {
+    // Use first <hr> as separator
+    const hr = hrElements[0]
+    const siblings: Element[] = []
+    let sibling = hr.nextElementSibling
+    while (sibling) {
+      siblings.push(sibling)
+      sibling = sibling.nextElementSibling
+    }
+
+    // Walk up if needed
+    if (siblings.length === 0) {
+      let parent = hr.parentElement
+      while (parent && parent !== content) {
+        const nextSibling = parent.nextElementSibling
+        if (nextSibling) {
+          let s: Element | null = nextSibling
+          while (s) {
+            siblings.push(s)
+            s = s.nextElementSibling
+          }
+          break
+        }
+        parent = parent.parentElement
+      }
+    }
+
+    if (siblings.length > 0) {
+      const styles = container.querySelectorAll('style')
+      const styleHtml = Array.from(styles)
+        .map((s) => s.outerHTML)
+        .join('')
+      return styleHtml + siblings.map((el) => el.outerHTML).join('')
+    }
+  }
+
+  // Separator patterns: ---, —— (em-dashes), or ─── (horizontal lines)
+  // Google Docs might convert --- to different characters
+  const separatorRegex = /^[-—─_]{3,}$/
+
+  // Find the element containing just separator characters
   for (const el of allElements) {
     const text = el.textContent?.trim()
-    if (text && /^-{3,}$/.test(text)) {
+    if (text && separatorRegex.test(text)) {
       // Make sure this element only contains the separator (not a parent with more content)
       const childText = Array.from(el.childNodes)
         .filter((n) => n.nodeType === Node.TEXT_NODE)
@@ -70,13 +112,13 @@ function extractBodyFromHtml(fullHtml: string): string {
         .join('')
         .trim()
 
-      if (childText && /^-{3,}$/.test(childText)) {
+      if (childText && separatorRegex.test(childText)) {
         separatorElement = el
         break
       }
 
       // Also check if direct text content is just the separator
-      if (el.children.length === 0 && /^-{3,}$/.test(text)) {
+      if (el.children.length === 0 && separatorRegex.test(text)) {
         separatorElement = el
         break
       }
@@ -84,11 +126,12 @@ function extractBodyFromHtml(fullHtml: string): string {
   }
 
   if (!separatorElement) {
-    // Try a simpler approach - find --- in text and work with the HTML
+    // Try a simpler approach - find separator in text and work with the HTML
+    // Match various dash/line characters
     const separatorPatterns = [
-      /<p[^>]*>\s*-{3,}\s*<\/p>/i,
-      /<span[^>]*>\s*-{3,}\s*<\/span>/i,
-      /<div[^>]*>\s*-{3,}\s*<\/div>/i,
+      /<p[^>]*>\s*[-—─_]{3,}\s*<\/p>/i,
+      /<span[^>]*>\s*[-—─_]{3,}\s*<\/span>/i,
+      /<div[^>]*>\s*[-—─_]{3,}\s*<\/div>/i,
     ]
 
     for (const pattern of separatorPatterns) {
@@ -101,7 +144,7 @@ function extractBodyFromHtml(fullHtml: string): string {
       }
     }
 
-    console.warn('No --- separator found, returning full HTML')
+    console.warn('No separator found in HTML, returning full HTML')
     return fullHtml
   }
 
