@@ -73,6 +73,7 @@ interface GooglePickerProps {
 
 const GOOGLE_API_SCRIPT = 'https://apis.google.com/js/api.js'
 const GOOGLE_GSI_SCRIPT = 'https://accounts.google.com/gsi/client'
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY as string | undefined
 
 export function GooglePicker({
   onSelect,
@@ -135,8 +136,8 @@ export function GooglePicker({
   }, [])
 
   const openPicker = useCallback(() => {
-    if (!pickerLoaded || !accessToken) {
-      console.error('Picker not ready:', { pickerLoaded, hasToken: !!accessToken })
+    if (!pickerLoaded || !accessToken || !GOOGLE_API_KEY) {
+      console.error('Picker not ready:', { pickerLoaded, hasToken: !!accessToken, hasApiKey: !!GOOGLE_API_KEY })
       return
     }
 
@@ -159,6 +160,7 @@ export function GooglePicker({
       const picker = new google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
+        .setDeveloperKey(GOOGLE_API_KEY)
         .setCallback((data: PickerResponse) => {
           setIsLoading(false)
 
@@ -180,7 +182,7 @@ export function GooglePicker({
     }
   }, [pickerLoaded, accessToken, mimeTypes, onSelect])
 
-  const isReady = pickerLoaded && accessToken && !disabled
+  const isReady = pickerLoaded && accessToken && GOOGLE_API_KEY && !disabled
 
   return (
     <button
