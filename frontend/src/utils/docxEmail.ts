@@ -73,70 +73,68 @@ export async function generateEmailFromDocx(
 
 /**
  * Extract the body content from the rendered HTML (content after --- separator)
+ * Uses DOM-based parsing to handle nested HTML structures from docx-preview
  */
 function extractBodyFromHtml(fullHtml: string): string {
+  // Parse HTML into actual DOM
   const container = document.createElement('div')
   container.innerHTML = fullHtml
 
-  // Debug: log the structure
-  console.log('Full HTML length:', fullHtml.length)
-  console.log('Container children:', container.children.length)
+  // Find the docx wrapper (docx-preview creates elements with .docx class)
+  const docxWrapper = container.querySelector('.docx') || container
 
-  // docx-preview creates a structure like: <article class="docx">...</article>
-  // or <section class="docx">...</section> depending on version
-  const docxWrapper = container.querySelector('.docx') || container.firstElementChild || container
+  // Get all top-level children
+  const children = Array.from(docxWrapper.children) as HTMLElement[]
 
-  console.log('Docx wrapper tag:', docxWrapper?.tagName)
-  console.log('Docx wrapper class:', docxWrapper?.className)
-
-  // Get all elements that might contain text (p, div, span, etc.)
-  const allElements = Array.from(docxWrapper.querySelectorAll('*'))
-
-  // Find element containing "---"
-  let separatorElement: Element | null = null
-  for (const el of allElements) {
-    // Only check direct text content, not nested
-    const directText = Array.from(el.childNodes)
-      .filter(n => n.nodeType === Node.TEXT_NODE)
-      .map(n => n.textContent)
-      .join('')
-
-    if (directText.includes('---') || el.textContent?.trim() === '---') {
-      separatorElement = el
-      console.log('Found separator in element:', el.tagName, el.className)
+  // Find the separator element (contains only "---")
+  let separatorIndex = -1
+  for (let i = 0; i < children.length; i++) {
+    const text = children[i].textContent?.trim()
+    if (text === '---' || (text && /^-{3,}$/.test(text))) {
+      separatorIndex = i
       break
     }
   }
 
-  if (!separatorElement) {
-    console.warn('No --- separator found in document. Full HTML:', fullHtml.substring(0, 500))
+  // If not found at top level, try deeper search - separator might be nested
+  if (separatorIndex === -1) {
+    const allElements = docxWrapper.querySelectorAll('*')
+    for (const el of allElements) {
+      const text = el.textContent?.trim()
+      // Check if this element contains ONLY the separator (not parent elements with more content)
+      if (text && /^-{3,}$/.test(text) && el.childNodes.length <= 1) {
+        // Found separator, now find its top-level ancestor within docxWrapper
+        let topLevel: HTMLElement = el as HTMLElement
+        while (topLevel.parentElement && topLevel.parentElement !== docxWrapper) {
+          topLevel = topLevel.parentElement
+        }
+        separatorIndex = children.indexOf(topLevel)
+        break
+      }
+    }
+  }
+
+  if (separatorIndex === -1) {
+    console.warn('No --- separator found, returning full HTML')
     return fullHtml
   }
 
-  // Find the top-level parent of the separator within the docx wrapper
-  let topLevelSeparator = separatorElement
-  while (topLevelSeparator.parentElement && topLevelSeparator.parentElement !== docxWrapper) {
-    topLevelSeparator = topLevelSeparator.parentElement
-  }
-
-  // Get all siblings after the separator
-  const bodyElements: Element[] = []
-  let sibling = topLevelSeparator.nextElementSibling
-  while (sibling) {
-    bodyElements.push(sibling)
-    sibling = sibling.nextElementSibling
-  }
-
-  console.log('Body elements count:', bodyElements.length)
+  // Extract all elements AFTER the separator
+  const bodyElements = children.slice(separatorIndex + 1)
 
   if (bodyElements.length === 0) {
-    console.warn('No content after --- separator')
+    console.warn('No content after separator')
     return fullHtml
   }
 
-  const result = bodyElements.map(el => el.outerHTML).join('')
-  console.log('Extracted body length:', result.length)
-  return result
+  // Preserve any <style> tags from docx-preview for formatting
+  const styles = container.querySelectorAll('style')
+  const styleHtml = Array.from(styles).map((s) => s.outerHTML).join('')
+
+  // Reconstruct HTML from body elements with styles
+  const bodyHtml = bodyElements.map((el) => el.outerHTML).join('')
+
+  return styleHtml + bodyHtml
 }
 
 /**
