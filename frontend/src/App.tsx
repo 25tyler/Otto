@@ -10,7 +10,7 @@ import { FailedEmailsPanel } from './components/send/FailedEmailsPanel'
 import { Instructions } from './components/Instructions'
 import { Card, CardHeader, CardTitle } from './components/ui/Card'
 import { LogOut, RotateCcw } from 'lucide-react'
-import { generateEmailFromDocx } from './utils/docxEmail'
+import { generateEmailFromGoogleDoc } from './utils/googleDocsEmail'
 
 export default function App() {
   const {
@@ -83,14 +83,14 @@ export default function App() {
 
   // Send test email to yourself
   const handleTestSend = useCallback(async () => {
-    if (!template || !excelData || !user || !template.docxArrayBuffer) return
+    if (!template || !excelData || !user || !template.sourceHtmlContent) return
 
     const firstRow = excelData.rows[0]
 
     try {
-      // Generate email from DOCX with placeholders replaced
-      const { subject, htmlBody } = await generateEmailFromDocx(
-        template.docxArrayBuffer,
+      // Generate email from Google Doc HTML with placeholders replaced
+      const { subject, htmlBody } = generateEmailFromGoogleDoc(
+        template.sourceHtmlContent,
         template.subject,
         firstRow,
         mappings
@@ -123,7 +123,7 @@ export default function App() {
 
   // Send all emails using batch API
   const handleSendAll = useCallback(async () => {
-    if (!template || !excelData || !user || !template.docxArrayBuffer) return
+    if (!template || !excelData || !user || !template.sourceHtmlContent) return
 
     setIsSending(true)
     setSendProgress({ sent: 0, total: excelData.totalRows })
@@ -136,24 +136,22 @@ export default function App() {
     }))
     setSendResults(initialResults)
 
-    // Generate emails from DOCX for each row
-    const emails = await Promise.all(
-      excelData.rows.map(async (row, index) => {
-        const { subject, htmlBody } = await generateEmailFromDocx(
-          template.docxArrayBuffer!,
-          template.subject,
-          row,
-          mappings
-        )
-        return {
-          rowIndex: index,
-          to: row[excelData.emailColumn],
-          cc: template.cc,
-          subject,
-          htmlBody,
-        }
-      })
-    )
+    // Generate emails from Google Doc HTML for each row (synchronous now)
+    const emails = excelData.rows.map((row, index) => {
+      const { subject, htmlBody } = generateEmailFromGoogleDoc(
+        template.sourceHtmlContent!,
+        template.subject,
+        row,
+        mappings
+      )
+      return {
+        rowIndex: index,
+        to: row[excelData.emailColumn],
+        cc: template.cc,
+        subject,
+        htmlBody,
+      }
+    })
 
     // Mark all as sending
     emails.forEach((_, index) => {
@@ -202,15 +200,15 @@ export default function App() {
 
   // Retry single failed email
   const handleRetry = useCallback(async (rowIndex: number) => {
-    if (!template || !excelData || !template.docxArrayBuffer) return
+    if (!template || !excelData || !template.sourceHtmlContent) return
 
     const row = excelData.rows[rowIndex]
     updateSendResult(rowIndex, { status: 'sending' })
 
     try {
-      // Generate email from DOCX with placeholders replaced
-      const { subject, htmlBody } = await generateEmailFromDocx(
-        template.docxArrayBuffer,
+      // Generate email from Google Doc HTML with placeholders replaced
+      const { subject, htmlBody } = generateEmailFromGoogleDoc(
+        template.sourceHtmlContent,
         template.subject,
         row,
         mappings
@@ -326,11 +324,11 @@ export default function App() {
         {/* Instructions */}
         <Instructions />
 
-        {/* Step 1: Upload Files */}
+        {/* Step 1: Select Files */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Step 1: Upload Files</CardTitle>
+              <CardTitle>Step 1: Select Files</CardTitle>
               {(template || excelData) && (
                 <button
                   onClick={reset}

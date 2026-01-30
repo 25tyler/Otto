@@ -11,6 +11,15 @@ export interface ParsedTemplate {
   placeholders: string[]
   rawText: string
   docxArrayBuffer?: ArrayBuffer
+  // Google Docs source
+  googleDocId?: string
+  sourceHtmlContent?: string
+}
+
+export interface GoogleFileRef {
+  id: string
+  name: string
+  mimeType: string
 }
 
 export interface ExcelData {

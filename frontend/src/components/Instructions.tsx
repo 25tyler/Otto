@@ -1,84 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, FileText, Table, Mail, HelpCircle, Download } from 'lucide-react'
-import * as XLSX from 'xlsx'
-import { Document, Packer, Paragraph, TextRun } from 'docx'
-
-// Generate and download sample Excel file
-const downloadSampleExcel = () => {
-  const data = [
-    { Email: 'john@example.com', Name: 'John Smith', Company: 'Acme Corp', Type: 'Monthly' },
-    { Email: 'jane@example.com', Name: 'Jane Doe', Company: 'Tech Inc', Type: 'Weekly' },
-    { Email: 'bob@example.com', Name: 'Bob Johnson', Company: 'StartupXYZ', Type: 'Monthly' },
-  ]
-
-  const worksheet = XLSX.utils.json_to_sheet(data)
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Recipients')
-
-  // Set column widths
-  worksheet['!cols'] = [
-    { wch: 25 }, // Email
-    { wch: 15 }, // Name
-    { wch: 15 }, // Company
-    { wch: 10 }, // Type
-  ]
-
-  XLSX.writeFile(workbook, 'otto-sample-data.xlsx')
-}
-
-// Generate and download sample DOCX template
-const downloadSampleTemplate = async () => {
-  const doc = new Document({
-    sections: [{
-      properties: {},
-      children: [
-        new Paragraph({
-          children: [new TextRun('Subject: Your [Type] Report is Ready')],
-        }),
-        new Paragraph({
-          children: [new TextRun('CC:')],
-        }),
-        new Paragraph({
-          children: [new TextRun('---')],
-        }),
-        new Paragraph({
-          children: [new TextRun('Dear [Name],')],
-        }),
-        new Paragraph({
-          children: [new TextRun('')],
-        }),
-        new Paragraph({
-          children: [new TextRun('Your [Type] report for [Company] is now ready for review.')],
-        }),
-        new Paragraph({
-          children: [new TextRun('')],
-        }),
-        new Paragraph({
-          children: [new TextRun('Please take a moment to review the attached document and let us know if you have any questions.')],
-        }),
-        new Paragraph({
-          children: [new TextRun('')],
-        }),
-        new Paragraph({
-          children: [new TextRun('Best regards,')],
-        }),
-        new Paragraph({
-          children: [new TextRun('Your Team')],
-        }),
-      ],
-    }],
-  })
-
-  const blob = await Packer.toBlob(doc)
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'otto-sample-template.docx'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}
+import { ChevronDown, ChevronUp, FileText, Table, Mail, HelpCircle } from 'lucide-react'
 
 export function Instructions() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -106,11 +27,11 @@ export function Instructions() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <FileText className="w-4 h-4 text-primary-600" />
-              <h4 className="font-semibold text-gray-900">1. Create Your Email Template</h4>
+              <h4 className="font-semibold text-gray-900">1. Create Your Email Template (Google Doc)</h4>
             </div>
             <div className="bg-white rounded-lg p-4 text-sm">
               <p className="text-gray-600 mb-3">
-                Create a Google Doc or Word document (.docx) with this format:
+                Create a Google Doc with this format:
               </p>
               <pre className="bg-gray-50 rounded-lg p-4 text-xs overflow-x-auto border border-gray-200">
 {`Subject: Your [Type] Report is Ready
@@ -142,26 +63,23 @@ Your Team`}
                   <span className="text-primary-600 font-bold">•</span>
                   <span><code className="bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded text-xs">[Placeholders]</code> will be replaced with your data</span>
                 </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-600 font-bold">•</span>
+                  <span>Format your text (bold, colors, fonts) - it will be preserved in emails!</span>
+                </li>
               </ul>
-              <button
-                onClick={downloadSampleTemplate}
-                className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
-              >
-                <Download className="w-4 h-4" />
-                Download Sample Template
-              </button>
             </div>
           </div>
 
-          {/* Excel Format */}
+          {/* Sheet Format */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Table className="w-4 h-4 text-primary-600" />
-              <h4 className="font-semibold text-gray-900">2. Prepare Your Excel Data</h4>
+              <h4 className="font-semibold text-gray-900">2. Prepare Your Recipient Data (Google Sheet)</h4>
             </div>
             <div className="bg-white rounded-lg p-4 text-sm">
               <p className="text-gray-600 mb-3">
-                Create an Excel file (.xlsx) with your recipient data:
+                Create a Google Sheet with your recipient data:
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
@@ -203,13 +121,6 @@ Your Team`}
                   <span>Column names should match your <code className="bg-yellow-100 text-yellow-800 px-1 rounded text-xs">[Placeholders]</code></span>
                 </li>
               </ul>
-              <button
-                onClick={downloadSampleExcel}
-                className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
-              >
-                <Download className="w-4 h-4" />
-                Download Sample Excel
-              </button>
             </div>
           </div>
 
@@ -223,7 +134,7 @@ Your Team`}
               <ol className="space-y-2 text-gray-600">
                 <li className="flex items-start gap-2">
                   <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                  <span>Upload your template and Excel file</span>
+                  <span>Select your Google Doc template and Google Sheet data</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>

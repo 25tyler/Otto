@@ -6,10 +6,12 @@ interface EmailState {
   // Template data
   template: ParsedTemplate | null
   templateFileName: string | null
+  templateDocId: string | null
 
-  // Excel data
+  // Excel/Sheet data
   excelData: ExcelData | null
   excelFileName: string | null
+  dataSheetId: string | null
 
   // Mappings
   mappings: PlaceholderMapping[]
@@ -23,8 +25,8 @@ interface EmailState {
   user: { email: string; name: string; picture: string } | null
 
   // Actions
-  setTemplate: (template: ParsedTemplate | null, fileName?: string) => void
-  setExcelData: (data: ExcelData | null, fileName?: string) => void
+  setTemplate: (template: ParsedTemplate | null, fileName?: string, docId?: string) => void
+  setExcelData: (data: ExcelData | null, fileName?: string, sheetId?: string) => void
   setMappings: (mappings: PlaceholderMapping[]) => void
   updateMapping: (placeholder: string, excelColumn: string | null) => void
   setSendResults: (results: SendResult[]) => void
@@ -43,19 +45,21 @@ export const useEmailStore = create<EmailState>()(
     (set, get) => ({
       template: null,
       templateFileName: null,
+      templateDocId: null,
       excelData: null,
       excelFileName: null,
+      dataSheetId: null,
       mappings: [],
       sendResults: [],
       isSending: false,
       sendProgress: { sent: 0, total: 0 },
       user: null,
 
-      setTemplate: (template, fileName) =>
-        set({ template, templateFileName: fileName || null }),
+      setTemplate: (template, fileName, docId) =>
+        set({ template, templateFileName: fileName || null, templateDocId: docId || null }),
 
-      setExcelData: (data, fileName) =>
-        set({ excelData: data, excelFileName: fileName || null }),
+      setExcelData: (data, fileName, sheetId) =>
+        set({ excelData: data, excelFileName: fileName || null, dataSheetId: sheetId || null }),
 
       setMappings: (mappings) => set({ mappings }),
 
@@ -91,8 +95,10 @@ export const useEmailStore = create<EmailState>()(
         set({
           template: null,
           templateFileName: null,
+          templateDocId: null,
           excelData: null,
           excelFileName: null,
+          dataSheetId: null,
           mappings: [],
           sendResults: [],
           isSending: false,

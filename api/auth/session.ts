@@ -20,7 +20,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ user: null })
     }
 
-    return res.json({ user: sessionData.user })
+    return res.json({ user: sessionData.user, accessToken: sessionData.accessToken })
   } catch (error) {
     return res.json({ user: null })
   }

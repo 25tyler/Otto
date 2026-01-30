@@ -1,49 +1,33 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useEmailStore } from '../../stores/emailStore'
-import { generateEmailPreview } from '../../utils/docxEmail'
+import { generateEmailFromGoogleDoc } from '../../utils/googleDocsEmail'
 import { EmailCard } from './EmailCard'
 import { NavigationControls } from './NavigationControls'
-import { Mail, Loader2 } from 'lucide-react'
+import { Mail } from 'lucide-react'
 
 export function EmailPreview() {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [preview, setPreview] = useState<{ subject: string; htmlBody: string } | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const { template, excelData, mappings, user } = useEmailStore()
 
   const currentRow = excelData?.rows[currentIndex]
   const totalRows = excelData?.rows.length || 0
 
-  // Generate preview when row changes
-  useEffect(() => {
-    if (!template || !currentRow || !mappings || !template.docxArrayBuffer) {
-      setPreview(null)
-      return
+  // Generate preview synchronously using useMemo (Google Docs HTML is already available)
+  const preview = useMemo(() => {
+    if (!template?.sourceHtmlContent || !currentRow || !mappings) {
+      return null
     }
 
-    let cancelled = false
-    setIsLoading(true)
-
-    generateEmailPreview(
-      template.docxArrayBuffer,
-      template.subject,
-      currentRow,
-      mappings
-    ).then((result) => {
-      if (!cancelled) {
-        setPreview(result)
-        setIsLoading(false)
-      }
-    }).catch((error) => {
+    try {
+      return generateEmailFromGoogleDoc(
+        template.sourceHtmlContent,
+        template.subject,
+        currentRow,
+        mappings
+      )
+    } catch (error) {
       console.error('Failed to generate preview:', error)
-      if (!cancelled) {
-        setPreview(null)
-        setIsLoading(false)
-      }
-    })
-
-    return () => {
-      cancelled = true
+      return null
     }
   }, [template, currentRow, mappings])
 
@@ -54,23 +38,21 @@ export function EmailPreview() {
           <Mail className="w-8 h-8 text-gray-400" />
         </div>
         <p className="text-gray-500">
-          Upload a template and Excel file to preview emails
+          Select a template and spreadsheet to preview emails
         </p>
       </div>
     )
   }
 
-  if (isLoading) {
+  if (!preview || !currentRow) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Loader2 className="w-8 h-8 text-primary-600 animate-spin mb-4" />
-        <p className="text-gray-500">Generating preview...</p>
+        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <Mail className="w-8 h-8 text-gray-400" />
+        </div>
+        <p className="text-gray-500">Unable to generate preview</p>
       </div>
     )
-  }
-
-  if (!preview || !currentRow) {
-    return null
   }
 
   const recipientEmail = currentRow[excelData.emailColumn]
