@@ -75,36 +75,42 @@ export async function generateEmailFromDocx(
  * Extract the body content from the rendered HTML (content after --- separator)
  */
 function extractBodyFromHtml(fullHtml: string): string {
-  // Find the element containing "---" and return everything after it
   const container = document.createElement('div')
   container.innerHTML = fullHtml
 
-  // Get all child elements of the container
-  const children = Array.from(container.children)
+  // docx-preview creates a structure like: <div class="docx">...</div>
+  // We need to find all paragraph-like elements and look for the separator
+  const docxWrapper = container.querySelector('.docx') || container
 
-  // Find the index of the element containing "---"
+  // Get all paragraph elements (docx-preview uses <p> tags)
+  const paragraphs = Array.from(docxWrapper.querySelectorAll('p'))
+
+  // Find the paragraph containing "---"
   let separatorIndex = -1
-  for (let i = 0; i < children.length; i++) {
-    const textContent = children[i].textContent || ''
-    if (textContent.includes('---')) {
+  for (let i = 0; i < paragraphs.length; i++) {
+    const text = paragraphs[i].textContent || ''
+    if (text.trim() === '---' || text.includes('---')) {
       separatorIndex = i
       break
     }
   }
 
   if (separatorIndex === -1) {
-    // No separator found, return the full content
+    // No separator found - return full content
+    console.warn('No --- separator found in document')
     return fullHtml
   }
 
-  // Get all elements after the separator
-  const bodyElements = children.slice(separatorIndex + 1)
+  // Get all paragraphs after the separator
+  const bodyParagraphs = paragraphs.slice(separatorIndex + 1)
 
-  if (bodyElements.length === 0) {
+  if (bodyParagraphs.length === 0) {
+    console.warn('No content after --- separator')
     return fullHtml
   }
 
-  return bodyElements.map(el => el.outerHTML).join('')
+  // Return the HTML of body paragraphs
+  return bodyParagraphs.map(p => p.outerHTML).join('')
 }
 
 /**
