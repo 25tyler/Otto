@@ -106,6 +106,8 @@ export default function App() {
         mappings
       )
 
+      console.log('Sending email with:', { subject, htmlBodyLength: htmlBody?.length, htmlBodyPreview: htmlBody?.substring(0, 200) })
+
       const response = await fetch('/api/email/send', {
         method: 'POST',
         headers: {

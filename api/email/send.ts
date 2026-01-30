@@ -31,7 +31,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { to, cc, subject, htmlBody }: SendEmailRequest = req.body
 
+  console.log('Email send request:', { to, subject, htmlBodyLength: htmlBody?.length, hasHtmlBody: !!htmlBody })
+
   if (!to || !subject || !htmlBody) {
+    console.log('Missing fields:', { to: !!to, subject: !!subject, htmlBody: !!htmlBody })
     return res.status(400).json({ error: 'Missing required fields' })
   }
 
