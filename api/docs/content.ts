@@ -66,17 +66,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const metadata = await metaResponse.json()
 
     // Extract raw text by stripping HTML tags (for placeholder parsing)
+    // Preserve line breaks by converting block elements to newlines first
     const rawText = htmlContent
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove style tags
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script tags
-      .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+      .replace(/<br\s*\/?>/gi, '\n') // Convert <br> to newline
+      .replace(/<\/p>/gi, '\n') // Convert </p> to newline
+      .replace(/<\/div>/gi, '\n') // Convert </div> to newline
+      .replace(/<\/h[1-6]>/gi, '\n') // Convert heading closes to newline
+      .replace(/<\/li>/gi, '\n') // Convert </li> to newline
+      .replace(/<[^>]*>/g, '') // Remove remaining HTML tags
       .replace(/&nbsp;/g, ' ') // Replace nbsp
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#039;/g, "'")
-      .replace(/\s+/g, ' ') // Collapse whitespace
+      .replace(/[ \t]+/g, ' ') // Collapse horizontal whitespace only (not newlines)
+      .replace(/\n +/g, '\n') // Remove leading spaces after newlines
+      .replace(/ +\n/g, '\n') // Remove trailing spaces before newlines
+      .replace(/\n{3,}/g, '\n\n') // Collapse multiple newlines to max 2
       .trim()
 
     const result: DocContent = {
