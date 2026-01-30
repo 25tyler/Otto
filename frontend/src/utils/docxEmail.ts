@@ -78,39 +78,65 @@ function extractBodyFromHtml(fullHtml: string): string {
   const container = document.createElement('div')
   container.innerHTML = fullHtml
 
-  // docx-preview creates a structure like: <div class="docx">...</div>
-  // We need to find all paragraph-like elements and look for the separator
-  const docxWrapper = container.querySelector('.docx') || container
+  // Debug: log the structure
+  console.log('Full HTML length:', fullHtml.length)
+  console.log('Container children:', container.children.length)
 
-  // Get all paragraph elements (docx-preview uses <p> tags)
-  const paragraphs = Array.from(docxWrapper.querySelectorAll('p'))
+  // docx-preview creates a structure like: <article class="docx">...</article>
+  // or <section class="docx">...</section> depending on version
+  const docxWrapper = container.querySelector('.docx') || container.firstElementChild || container
 
-  // Find the paragraph containing "---"
-  let separatorIndex = -1
-  for (let i = 0; i < paragraphs.length; i++) {
-    const text = paragraphs[i].textContent || ''
-    if (text.trim() === '---' || text.includes('---')) {
-      separatorIndex = i
+  console.log('Docx wrapper tag:', docxWrapper?.tagName)
+  console.log('Docx wrapper class:', docxWrapper?.className)
+
+  // Get all elements that might contain text (p, div, span, etc.)
+  const allElements = Array.from(docxWrapper.querySelectorAll('*'))
+
+  // Find element containing "---"
+  let separatorElement: Element | null = null
+  for (const el of allElements) {
+    // Only check direct text content, not nested
+    const directText = Array.from(el.childNodes)
+      .filter(n => n.nodeType === Node.TEXT_NODE)
+      .map(n => n.textContent)
+      .join('')
+
+    if (directText.includes('---') || el.textContent?.trim() === '---') {
+      separatorElement = el
+      console.log('Found separator in element:', el.tagName, el.className)
       break
     }
   }
 
-  if (separatorIndex === -1) {
-    // No separator found - return full content
-    console.warn('No --- separator found in document')
+  if (!separatorElement) {
+    console.warn('No --- separator found in document. Full HTML:', fullHtml.substring(0, 500))
     return fullHtml
   }
 
-  // Get all paragraphs after the separator
-  const bodyParagraphs = paragraphs.slice(separatorIndex + 1)
+  // Find the top-level parent of the separator within the docx wrapper
+  let topLevelSeparator = separatorElement
+  while (topLevelSeparator.parentElement && topLevelSeparator.parentElement !== docxWrapper) {
+    topLevelSeparator = topLevelSeparator.parentElement
+  }
 
-  if (bodyParagraphs.length === 0) {
+  // Get all siblings after the separator
+  const bodyElements: Element[] = []
+  let sibling = topLevelSeparator.nextElementSibling
+  while (sibling) {
+    bodyElements.push(sibling)
+    sibling = sibling.nextElementSibling
+  }
+
+  console.log('Body elements count:', bodyElements.length)
+
+  if (bodyElements.length === 0) {
     console.warn('No content after --- separator')
     return fullHtml
   }
 
-  // Return the HTML of body paragraphs
-  return bodyParagraphs.map(p => p.outerHTML).join('')
+  const result = bodyElements.map(el => el.outerHTML).join('')
+  console.log('Extracted body length:', result.length)
+  return result
 }
 
 /**
