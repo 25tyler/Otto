@@ -11,5 +11,8 @@
   },
   "keywords": ["email", "automation", "bulk-email", "mail-merge"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/node": "^3.0.0"
+  }
 }
