@@ -45,11 +45,8 @@ export async function generateEmailFromDocx(
     delimiters: { start: '[', end: ']' },
   })
 
-  // Set the data for placeholder replacement
-  doc.setData(templateData)
-
-  // Render the document (replace all placeholders)
-  doc.render()
+  // Render the document with data (replace all placeholders)
+  doc.render(templateData)
 
   // Get the modified DOCX as ArrayBuffer
   const modifiedDocx = doc.getZip().generate({
@@ -82,44 +79,32 @@ function extractBodyFromHtml(fullHtml: string): string {
   const container = document.createElement('div')
   container.innerHTML = fullHtml
 
-  // Walk through all elements to find the separator
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
-  let foundSeparator = false
-  let separatorNode: Node | null = null
+  // Get all child elements of the container
+  const children = Array.from(container.children)
 
-  while (walker.nextNode()) {
-    const textContent = walker.currentNode.textContent || ''
+  // Find the index of the element containing "---"
+  let separatorIndex = -1
+  for (let i = 0; i < children.length; i++) {
+    const textContent = children[i].textContent || ''
     if (textContent.includes('---')) {
-      foundSeparator = true
-      separatorNode = walker.currentNode
+      separatorIndex = i
       break
     }
   }
 
-  if (!foundSeparator || !separatorNode) {
+  if (separatorIndex === -1) {
     // No separator found, return the full content
     return fullHtml
   }
 
-  // Find the parent element of the separator and get all content after it
-  let separatorElement = separatorNode.parentElement
-  while (separatorElement && separatorElement.parentElement !== container) {
-    separatorElement = separatorElement.parentElement
-  }
+  // Get all elements after the separator
+  const bodyElements = children.slice(separatorIndex + 1)
 
-  if (!separatorElement) {
+  if (bodyElements.length === 0) {
     return fullHtml
   }
 
-  // Get all sibling elements after the separator
-  const bodyElements: string[] = []
-  let sibling = separatorElement.nextElementSibling
-  while (sibling) {
-    bodyElements.push(sibling.outerHTML)
-    sibling = sibling.nextElementSibling
-  }
-
-  return bodyElements.join('')
+  return bodyElements.map(el => el.outerHTML).join('')
 }
 
 /**
