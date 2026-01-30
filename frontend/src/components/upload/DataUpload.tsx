@@ -4,7 +4,7 @@ import { useEmailStore } from '../../stores/emailStore'
 import { autoMapPlaceholders } from '../../utils/placeholders'
 import { GooglePicker } from '../picker/GooglePicker'
 
-const SAMPLE_DATA_URL = 'https://docs.google.com/spreadsheets/d/1example-data-id/copy'
+const SAMPLE_DATA_URL = 'https://docs.google.com/spreadsheets/d/1cV1ZVWI0Abl1mBY_sFgMnJyaazlxN-i3zJeXEhNZzRc/copy'
 
 export function DataUpload() {
   const [isLoading, setIsLoading] = useState(false)

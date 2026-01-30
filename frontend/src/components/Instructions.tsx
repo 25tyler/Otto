@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { ChevronDown, ChevronUp, FileText, Table, Mail, HelpCircle, ExternalLink } from 'lucide-react'
 
 // Public sample templates - users can "Make a copy" to use them
-const SAMPLE_TEMPLATE_URL = 'https://docs.google.com/document/d/1example-template-id/copy'
-const SAMPLE_DATA_URL = 'https://docs.google.com/spreadsheets/d/1example-data-id/copy'
+const SAMPLE_TEMPLATE_URL = 'https://docs.google.com/document/d/1yezPP9w8aIzb3a8wtsFGL5-Mit9h-Hwa15ZMhyoBkS0/copy'
+const SAMPLE_DATA_URL = 'https://docs.google.com/spreadsheets/d/1cV1ZVWI0Abl1mBY_sFgMnJyaazlxN-i3zJeXEhNZzRc/copy'
 
 export function Instructions() {
   const [isExpanded, setIsExpanded] = useState(false)

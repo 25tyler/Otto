@@ -4,7 +4,7 @@ import { useEmailStore } from '../../stores/emailStore'
 import { extractPlaceholders, autoMapPlaceholders } from '../../utils/placeholders'
 import { GooglePicker } from '../picker/GooglePicker'
 
-const SAMPLE_TEMPLATE_URL = 'https://docs.google.com/document/d/1example-template-id/copy'
+const SAMPLE_TEMPLATE_URL = 'https://docs.google.com/document/d/1yezPP9w8aIzb3a8wtsFGL5-Mit9h-Hwa15ZMhyoBkS0/copy'
 
 export function TemplateUpload() {
   const [isLoading, setIsLoading] = useState(false)
