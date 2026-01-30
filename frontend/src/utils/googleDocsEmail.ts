@@ -25,11 +25,7 @@ export function generateEmailFromGoogleDoc(
   })
 
   // Extract body content after --- separator
-  console.log('Source HTML length:', sourceHtml?.length)
-  console.log('Source HTML preview:', sourceHtml?.substring(0, 500))
   let htmlBody = extractBodyFromHtml(sourceHtml)
-  console.log('Extracted body length:', htmlBody?.length)
-  console.log('Extracted body preview:', htmlBody?.substring(0, 500))
 
   // Replace placeholders in body HTML
   // Need to be careful to preserve HTML structure while replacing placeholder text
