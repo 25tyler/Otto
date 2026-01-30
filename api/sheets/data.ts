@@ -30,16 +30,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'No access token' })
   }
 
-  // Extract sheetId and optional range
-  const { sheetId, range = 'Sheet1' } = req.query
-  if (!sheetId || typeof sheetId !== 'string') {
-    return res.status(400).json({ error: 'Missing sheetId' })
+  // Extract sheetId from query parameter
+  const { id, range = 'Sheet1' } = req.query
+  if (!id || typeof id !== 'string') {
+    return res.status(400).json({ error: 'Missing id parameter' })
   }
 
   try {
     // First, get spreadsheet metadata to find sheet names
     const metaResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets.properties.title`,
       {
         headers: { Authorization: `Bearer ${session.accessToken}` },
       }
@@ -61,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Fetch sheet data via Sheets API
     const sheetsResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(sheetRange)}?majorDimension=ROWS`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(sheetRange)}?majorDimension=ROWS`,
       {
         headers: { Authorization: `Bearer ${session.accessToken}` },
       }

@@ -18,7 +18,7 @@ export function TemplateUpload() {
 
       try {
         // Fetch doc content from backend
-        const response = await fetch(`/api/docs/${file.id}/content`)
+        const response = await fetch(`/api/docs/content?id=${file.id}`)
         if (!response.ok) {
           const err = await response.json()
           throw new Error(err.error || 'Failed to fetch document')

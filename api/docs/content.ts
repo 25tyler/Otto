@@ -28,16 +28,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'No access token' })
   }
 
-  // Extract docId from URL
-  const { docId } = req.query
-  if (!docId || typeof docId !== 'string') {
-    return res.status(400).json({ error: 'Missing docId' })
+  // Extract docId from query parameter
+  const { id } = req.query
+  if (!id || typeof id !== 'string') {
+    return res.status(400).json({ error: 'Missing id parameter' })
   }
 
   try {
     // Export as HTML using Drive API
     const exportResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${docId}/export?mimeType=text/html`,
+      `https://www.googleapis.com/drive/v3/files/${id}/export?mimeType=text/html`,
       {
         headers: { Authorization: `Bearer ${session.accessToken}` },
       }
@@ -52,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get document metadata for title
     const metaResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${docId}?fields=name`,
+      `https://www.googleapis.com/drive/v3/files/${id}?fields=name`,
       {
         headers: { Authorization: `Bearer ${session.accessToken}` },
       }

@@ -18,7 +18,7 @@ export function DataUpload() {
 
       try {
         // Fetch sheet data from backend
-        const response = await fetch(`/api/sheets/${file.id}/data`)
+        const response = await fetch(`/api/sheets/data?id=${file.id}`)
         if (!response.ok) {
           const err = await response.json()
           throw new Error(err.error || 'Failed to fetch spreadsheet')
