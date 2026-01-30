@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react'
-import { FileText, Check, X, AlertCircle, Link } from 'lucide-react'
+import { FileText, Check, X, AlertCircle, Link, ExternalLink } from 'lucide-react'
 import { useEmailStore } from '../../stores/emailStore'
 import { extractPlaceholders, autoMapPlaceholders } from '../../utils/placeholders'
 import { GooglePicker } from '../picker/GooglePicker'
+
+const SAMPLE_TEMPLATE_URL = 'https://docs.google.com/document/d/1example-template-id/copy'
 
 export function TemplateUpload() {
   const [isLoading, setIsLoading] = useState(false)
@@ -150,20 +152,31 @@ export function TemplateUpload() {
   }
 
   return (
-    <div className="border-2 border-dashed rounded-xl p-8 text-center border-gray-300">
+    <div className="border-2 border-dashed rounded-xl p-6 text-center border-gray-300">
       <div className="flex flex-col items-center">
         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
           <FileText className="w-6 h-6 text-gray-400" />
         </div>
         <p className="font-medium text-gray-900 mb-1">Email Template</p>
         <p className="text-sm text-gray-500 mb-4">Select a Google Doc with your email template</p>
-        <GooglePicker
-          onSelect={handleDocSelect}
-          mimeTypes={['application/vnd.google-apps.document']}
-          buttonText="Select from Google Drive"
-          buttonIcon={<Link className="w-4 h-4" />}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-        />
+        <div className="flex flex-col gap-3 w-full">
+          <GooglePicker
+            onSelect={handleDocSelect}
+            mimeTypes={['application/vnd.google-apps.document']}
+            buttonText="Select from Google Drive"
+            buttonIcon={<Link className="w-4 h-4" />}
+            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm font-medium"
+          />
+          <a
+            href={SAMPLE_TEMPLATE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 text-xs text-gray-500 hover:text-primary-600 transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" />
+            <span>Copy sample template to get started</span>
+          </a>
+        </div>
       </div>
     </div>
   )

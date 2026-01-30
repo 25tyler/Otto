@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, FileText, Table, Mail, HelpCircle } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, Table, Mail, HelpCircle, ExternalLink } from 'lucide-react'
+
+// Public sample templates - users can "Make a copy" to use them
+const SAMPLE_TEMPLATE_URL = 'https://docs.google.com/document/d/1example-template-id/copy'
+const SAMPLE_DATA_URL = 'https://docs.google.com/spreadsheets/d/1example-data-id/copy'
 
 export function Instructions() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -68,6 +72,15 @@ Your Team`}
                   <span>Format your text (bold, colors, fonts) - it will be preserved in emails!</span>
                 </li>
               </ul>
+              <a
+                href={SAMPLE_TEMPLATE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Copy Sample Template
+              </a>
             </div>
           </div>
 
@@ -121,6 +134,15 @@ Your Team`}
                   <span>Column names should match your <code className="bg-yellow-100 text-yellow-800 px-1 rounded text-xs">[Placeholders]</code></span>
                 </li>
               </ul>
+              <a
+                href={SAMPLE_DATA_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Copy Sample Spreadsheet
+              </a>
             </div>
           </div>
 
