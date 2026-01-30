@@ -174,16 +174,24 @@ export function GooglePicker({
         .setDeveloperKey(GOOGLE_API_KEY)
         .setOrigin(window.location.origin)
         .setCallback((data: PickerResponse) => {
-          setIsLoading(false)
+          console.log('Picker callback received:', data)
+
+          if (data.action === google.picker.Action.CANCEL) {
+            setIsLoading(false)
+            return
+          }
 
           if (data.action === google.picker.Action.PICKED && data.docs && data.docs.length > 0) {
             const file = data.docs[0]
+            console.log('File selected:', file)
             onSelect({
               id: file.id,
               name: file.name,
               mimeType: file.mimeType,
             })
           }
+
+          setIsLoading(false)
         })
 
       // setAppId is required for proper file selection
