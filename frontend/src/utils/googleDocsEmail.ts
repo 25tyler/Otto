@@ -25,7 +25,11 @@ export function generateEmailFromGoogleDoc(
   })
 
   // Extract body content after --- separator
+  console.log('Source HTML length:', sourceHtml?.length)
+  console.log('Source HTML preview:', sourceHtml?.substring(0, 500))
   let htmlBody = extractBodyFromHtml(sourceHtml)
+  console.log('Extracted body length:', htmlBody?.length)
+  console.log('Extracted body preview:', htmlBody?.substring(0, 500))
 
   // Replace placeholders in body HTML
   // Need to be careful to preserve HTML structure while replacing placeholder text
@@ -97,9 +101,9 @@ function extractBodyFromHtml(fullHtml: string): string {
     }
   }
 
-  // Separator patterns: ---, —— (em-dashes), or ─── (horizontal lines)
-  // Google Docs might convert --- to different characters
-  const separatorRegex = /^[-—─_]{3,}$/
+  // Separator patterns: various dash-like characters that Google Docs might use
+  // Including regular hyphen, en-dash, em-dash, horizontal bar, box drawing, underscore
+  const separatorRegex = /^[-–—―─_\u2010-\u2015\u2500-\u257F]{3,}$/
 
   // Find the element containing just separator characters
   for (const el of allElements) {
@@ -125,13 +129,25 @@ function extractBodyFromHtml(fullHtml: string): string {
     }
   }
 
+  // If still not found, try text-based search for "---" pattern
+  if (!separatorElement) {
+    for (const el of allElements) {
+      const text = el.textContent?.trim()
+      // Look for any element that contains exactly "---" (three regular hyphens)
+      if (text === '---') {
+        separatorElement = el
+        break
+      }
+    }
+  }
+
   if (!separatorElement) {
     // Try a simpler approach - find separator in text and work with the HTML
     // Match various dash/line characters
     const separatorPatterns = [
-      /<p[^>]*>\s*[-—─_]{3,}\s*<\/p>/i,
-      /<span[^>]*>\s*[-—─_]{3,}\s*<\/span>/i,
-      /<div[^>]*>\s*[-—─_]{3,}\s*<\/div>/i,
+      /<p[^>]*>[^<]*[-–—―─_]{3,}[^<]*<\/p>/i,
+      /<span[^>]*>[^<]*[-–—―─_]{3,}[^<]*<\/span>/i,
+      /<div[^>]*>[^<]*[-–—―─_]{3,}[^<]*<\/div>/i,
     ]
 
     for (const pattern of separatorPatterns) {
@@ -140,6 +156,25 @@ function extractBodyFromHtml(fullHtml: string): string {
         const afterSeparator = fullHtml.substring(match.index + match[0].length).trim()
         if (afterSeparator) {
           return afterSeparator
+        }
+      }
+    }
+
+    // Last resort: look for "---" literally in the HTML
+    const literalIndex = fullHtml.indexOf('---')
+    if (literalIndex !== -1) {
+      // Find the end of the containing element
+      const afterDashes = fullHtml.substring(literalIndex + 3)
+      // Find the next closing tag or paragraph
+      const closingMatch = afterDashes.match(/^[^<]*(<\/[^>]+>)/)
+      if (closingMatch) {
+        const startIndex = literalIndex + 3 + (closingMatch.index || 0) + closingMatch[0].length
+        const bodyContent = fullHtml.substring(startIndex).trim()
+        if (bodyContent) {
+          // Include styles
+          const styleMatch = fullHtml.match(/<style[^>]*>[\s\S]*?<\/style>/gi)
+          const styleHtml = styleMatch ? styleMatch.join('') : ''
+          return styleHtml + bodyContent
         }
       }
     }
