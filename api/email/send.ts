@@ -40,18 +40,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Build RFC 2822 message
-    const messageParts = [
+    // Headers first, then blank line, then body
+    const headers = [
       `From: ${session.user.email}`,
       `To: ${to}`,
-      cc?.length ? `Cc: ${cc.join(', ')}` : '',
+      cc?.length ? `Cc: ${cc.join(', ')}` : null,
       `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
-      '',
-      htmlBody,
     ]
-      .filter(Boolean)
+      .filter((h): h is string => h !== null)
       .join('\r\n')
+
+    // RFC 2822: blank line separates headers from body
+    const messageParts = headers + '\r\n\r\n' + htmlBody
 
     // Base64 URL-safe encode
     const encodedMessage = Buffer.from(messageParts)
