@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { checkQuota, incrementQuota, DAILY_LIMIT } from './quota'
 
 interface SendEmailRequest {
   to: string
@@ -10,18 +11,34 @@ interface SendEmailRequest {
 // Convert HTML to plain text for multipart emails
 function htmlToPlainText(html: string): string {
   return html
+    // Handle links - show URL in parentheses
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, '$2 ($1)')
+    // Handle lists
+    .replace(/<ul[^>]*>/gi, '\n')
+    .replace(/<ol[^>]*>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    // Handle block elements
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')
     .replace(/<\/h[1-6]>/gi, '\n\n')
     .replace(/<\/li>/gi, '\n')
+    // Strip remaining tags
     .replace(/<[^>]*>/g, '')
+    // Decode HTML entities
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&mdash;/g, '—')
+    .replace(/&ndash;/g, '–')
+    // Clean up whitespace
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
@@ -54,21 +71,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
 
+  // Check daily quota
+  const quota = checkQuota(session.user.email)
+  if (!quota.allowed) {
+    return res.status(429).json({
+      error: `Daily sending limit reached (${DAILY_LIMIT} emails). Try again tomorrow.`,
+      quotaExceeded: true,
+      remaining: 0,
+    })
+  }
+
   try {
     // Generate plain text version from HTML
     const plainText = htmlToPlainText(htmlBody)
 
-    // Generate a boundary for multipart message
+    // Generate unique identifiers
     const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(2)}`
+    const domain = session.user.email.split('@')[1] || 'gmail.com'
+    const messageId = `<${Date.now()}.${Math.random().toString(36).substring(2)}@${domain}>`
 
-    // Build RFC 2822 multipart message
+    // Build RFC 2822 multipart message with all recommended headers
     const headers = [
+      `Message-ID: ${messageId}`,
+      `Date: ${new Date().toUTCString()}`,
       `From: ${session.user.email}`,
       `To: ${to}`,
       cc?.length ? `Cc: ${cc.join(', ')}` : null,
       `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
       'MIME-Version: 1.0',
       `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      // Unsubscribe headers for Gmail compliance
+      `List-Unsubscribe: <mailto:${session.user.email}?subject=Unsubscribe>`,
+      'List-Unsubscribe-Post: List-Unsubscribe=One-Click',
+      // Prevent auto-replies to bulk mail
+      'Precedence: bulk',
     ]
       .filter((h): h is string => h !== null)
       .join('\r\n')
@@ -108,15 +144,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || 'Failed to send email')
+      const errorData = await response.json()
+      const status = response.status
+
+      // Handle specific error types
+      if (status === 429) {
+        return res.status(429).json({
+          error: 'Rate limited by Gmail. Please wait and try again.',
+          rateLimited: true,
+        })
+      } else if (status === 403) {
+        return res.status(403).json({
+          error: 'Gmail quota exceeded. Try again later.',
+          quotaExceeded: true,
+        })
+      } else if (status === 401) {
+        return res.status(401).json({
+          error: 'Session expired. Please sign in again.',
+          authExpired: true,
+        })
+      }
+
+      throw new Error(errorData.error?.message || 'Failed to send email')
     }
+
+    // Increment quota on success
+    incrementQuota(session.user.email)
 
     const result = await response.json()
 
     res.json({
       success: true,
       messageId: result.id,
+      quotaRemaining: quota.remaining - 1,
     })
   } catch (error) {
     console.error('Send email error:', error)

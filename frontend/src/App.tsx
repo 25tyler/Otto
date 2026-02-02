@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useEmailStore } from './stores/emailStore'
 import { GoogleSignIn } from './components/auth/GoogleSignIn'
 import { TemplateUpload } from './components/upload/TemplateUpload'
@@ -9,9 +9,10 @@ import { SendControls } from './components/send/SendControls'
 import { FailedEmailsPanel } from './components/send/FailedEmailsPanel'
 import { Instructions } from './components/Instructions'
 import { Card, CardHeader, CardTitle } from './components/ui/Card'
-import { LogOut, RotateCcw } from 'lucide-react'
+import { LogOut, RotateCcw, AlertTriangle } from 'lucide-react'
 import { generateEmailFromGoogleDoc } from './utils/googleDocsEmail'
 import { autoMapPlaceholders } from './utils/placeholders'
+import { checkForSpamTriggers, getSpamRiskLevel, type SpamWarning } from './utils/spamCheck'
 
 export default function App() {
   const {
@@ -62,6 +63,14 @@ export default function App() {
   const isReadyToPreview = template && excelData && mappings.length > 0
   const hasUnmappedPlaceholders = mappings.some((m) => !m.excelColumn)
   const hasSendResults = sendResults.length > 0
+
+  // Check for spam triggers in the template
+  const spamWarnings = useMemo<SpamWarning[]>(() => {
+    if (!template) return []
+    return checkForSpamTriggers(template.subject, template.rawText || '')
+  }, [template])
+
+  const spamRiskLevel = useMemo(() => getSpamRiskLevel(spamWarnings), [spamWarnings])
 
   // Real Google OAuth sign-in
   const handleSignIn = async () => {
@@ -380,6 +389,72 @@ export default function App() {
               <CardTitle>Step 3: Preview & Send</CardTitle>
             </CardHeader>
             <EmailPreview />
+
+            {/* Spam Warnings */}
+            {spamWarnings.length > 0 && (
+              <div
+                className={`mx-6 mb-4 p-4 rounded-lg border ${
+                  spamRiskLevel === 'high'
+                    ? 'bg-red-50 border-red-200'
+                    : spamRiskLevel === 'medium'
+                      ? 'bg-amber-50 border-amber-200'
+                      : 'bg-blue-50 border-blue-200'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <AlertTriangle
+                    className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                      spamRiskLevel === 'high'
+                        ? 'text-red-600'
+                        : spamRiskLevel === 'medium'
+                          ? 'text-amber-600'
+                          : 'text-blue-600'
+                    }`}
+                  />
+                  <div>
+                    <h4
+                      className={`font-medium mb-2 ${
+                        spamRiskLevel === 'high'
+                          ? 'text-red-900'
+                          : spamRiskLevel === 'medium'
+                            ? 'text-amber-900'
+                            : 'text-blue-900'
+                      }`}
+                    >
+                      {spamRiskLevel === 'high'
+                        ? 'High Spam Risk Detected'
+                        : spamRiskLevel === 'medium'
+                          ? 'Potential Spam Issues'
+                          : 'Minor Spam Concerns'}
+                    </h4>
+                    <ul
+                      className={`text-sm space-y-1 ${
+                        spamRiskLevel === 'high'
+                          ? 'text-red-800'
+                          : spamRiskLevel === 'medium'
+                            ? 'text-amber-800'
+                            : 'text-blue-800'
+                      }`}
+                    >
+                      {spamWarnings.map((warning, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-xs mt-1">
+                            {warning.type === 'high' ? '!!' : warning.type === 'medium' ? '!' : '-'}
+                          </span>
+                          {warning.message}
+                        </li>
+                      ))}
+                    </ul>
+                    {spamRiskLevel === 'high' && (
+                      <p className="text-sm text-red-700 mt-2">
+                        Consider revising your template to avoid spam filters.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <SendControls onTestSend={handleTestSend} onSendAll={handleSendAll} />
           </Card>
         )}
